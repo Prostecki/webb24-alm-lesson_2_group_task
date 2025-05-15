@@ -33,7 +33,7 @@ describe("Product Model Test Suite", () => {
 
       expect(savedProduct._id).toBeDefined();
       expect(savedProduct.name).toBe(validProductData.name);
-      expect(savedProduct.price).toBe(99.99999);
+      expect(savedProduct.price).toBe(99.99);
       expect(savedProduct.description).toBe(validProductData.description);
     });
 
@@ -51,7 +51,7 @@ describe("Product Model Test Suite", () => {
       }
 
       expect(err).toBeDefined();
-      expect(err.errors.wrongField).toBeDefined();
+      expect(err.errors.name).toBeDefined();
     });
 
     test("should not allow negative prices", async () => {
@@ -82,7 +82,10 @@ describe("Product Model Test Suite", () => {
 
       const foundProduct = await Product.findById(savedProduct._id);
       expect(foundProduct).toBeDefined();
-      expect(foundProduct).toBe(savedProduct);
+      expect(foundProduct._id).toEqual(savedProduct._id);
+      expect(foundProduct.name).toBe(savedProduct.name);
+      expect(foundProduct.price).toBe(savedProduct.price);
+      expect(foundProduct.description).toBe(savedProduct.description);
     });
 
     test("should update product successfully", async () => {
@@ -96,19 +99,19 @@ describe("Product Model Test Suite", () => {
         { new: true }
       );
 
-      expect(product.name).toBe(updatedName);
+      expect(updatedProduct.name).toBe(updatedName);
     });
 
     test("should handle concurrent updates correctly", async () => {
       const product = new Product(validProductData);
       await product.save();
 
-      const update1 = Product.findByIdAndUpdate(product._id, { price: 199.99 });
-      const update2 = Product.findByIdAndUpdate(product._id, { price: 299.99 });
-
-      await Promise.all([update1, update2]);
+      await Promise.all([
+        Product.findByIdAndUpdate(product._id, { price: 199.99 }),
+        Product.findByIdAndUpdate(product._id, { price: 299.99 }),
+      ]);
       const updatedProduct = await Product.findById(product._id);
-      expect(updatedProduct.price).toBe(199.99);
+      expect(updatedProduct.price).toBe(299.99);
     });
   });
 
@@ -122,7 +125,8 @@ describe("Product Model Test Suite", () => {
 
       const originalUpdatedAt = savedProduct.updatedAt;
       await Product.findByIdAndUpdate(savedProduct._id, { price: 199.99 });
-      expect(savedProduct.updatedAt).not.toBe(originalUpdatedAt);
+      const refreshedProduct = await Product.findById(savedProduct._id);
+      expect(refreshedProduct.updatedAt).not.toBe(originalUpdatedAt);
     });
 
     test("should have createdAt equal to updatedAt on creation", async () => {
